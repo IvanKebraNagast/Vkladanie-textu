@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="sk" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Medovníky</title>
+  
+  <!-- !!! TOTO JE KĽÚČOVÉ PRE TVOJU IKONU !!! -->
+  <!-- Súbor Img_1399.png MUSÍ byť v rovnakej zložke ako tento index.html -->
+  <link rel="apple-touch-icon" sizes="180x180" href="Img_1399.png">
+  <link rel="icon" type="image/png" href="Img_1399.png">
+  <link rel="shortcut icon" href="Img_1399.png">
+  <!-- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! -->
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Medovníky">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Inter:wght@400;700&family=Lora:ital,wght@0,600;1,600&family=Oswald:wght@500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      touch-action: none;
+      overscroll-behavior: none;
+      font-family: 'Inter', sans-serif;
+      background-color: #111827;
+    }
+    
+    .canvas-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #374151;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    canvas {
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      max-width: 95%;
+      max-height: 95%;
+    }
+    
+    /* Panel */
+    .controls-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      padding: 16px;
+      box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+      z-index: 50;
+      transition: transform 0.3s ease;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+
+    .controls-panel.collapsed {
+        transform: translateY(88%);
+    }
+
+    .toggle-handle {
+        width: 40px;
+        height: 5px;
+        background-color: #d1d5db;
+        border-radius: 10px;
+        margin: 0 auto 15px auto;
+        cursor: pointer;
+    }
+
+    /* Modal pre manuálne uloženie */
+    .save-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.9);
+        z-index: 100;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    
+    .save-modal img {
+        max-width: 100%;
+        max-height: 70vh;
+        border: 2px solid white;
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(255,255,255,0.2);
+    }
+
+    input[type="color"] {
+        -webkit-appearance: none;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        overflow: hidden;
+        cursor: pointer;
+        padding: 0;
+    }
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    input[type="color"]::-webkit-color-swatch { border: none; border: 2px solid #e5e7eb; border-radius: 50%; }
+  </style>
+ </head>
+ <body class="h-full flex flex-col">
+
+  <!-- Hlavná plocha -->
+  <div class="canvas-wrapper flex-1">
+      <canvas id="canvas"></canvas>
+      <div id="placeholder" class="absolute text-white text-center pointer-events-none p-4">
+          <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+          <h2 class="text-xl font-bold">Nahrajte fotku</h2>
+          <p class="text-sm opacity-70">Ovládanie je dole 👇</p>
+      </div>
+  </div>
+
+  <!-- Modal pre uloženie (Fallback) -->
+  <div id="saveModal" class="save-modal">
+      <h3 class="text-white text-xl font-bold mb-4 text-center">👇 Podržte prst na obrázku 👇</h3>
+      <p class="text-gray-300 text-sm mb-4 text-center">...a vyberte "Uložiť do fotiek" (Save to Photos)</p>
+      <img id="resultImage" alt="Výsledný obrázok">
+      <button onclick="closeModal()" class="mt-6 px-6 py-3 bg-white text-black font-bold rounded-full">Zavrieť</button>
+  </div>
+
+  <!-- Ovládací panel -->
+  <div class="controls-panel" id="controlsPanel">
+      <div class="toggle-handle" id="togglePanel"></div>
+      
+      <div class="space-y-4 pb-4">
+          <!-- Hlavné Tlačidlá -->
+          <div class="flex gap-2">
+              <label class="flex-1 bg-indigo-600 text-white py-3 rounded-xl text-center font-bold shadow-md active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 text-sm">
+                  <span>📷</span> Nahrať
+                  <input type="file" id="imageUpload" accept="image/*" class="hidden">
+              </label>
+              <button id="shareBtn" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-md active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm" disabled>
+                  <span>📤</span> Uložiť / Zdieľať
+              </button>
+          </div>
+
+          <!-- Štýl Karty -->
+          <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+              <h3 class="text-xs font-bold text-gray-500 uppercase mb-2">Pozadie Textu</h3>
+              <div class="flex gap-2 mb-3">
+                  <button class="flex-1 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 text-xs font-semibold shadow-sm focus:ring-2 focus:ring-indigo-500" onclick="setTheme('light')">Biele</button>
+                  <button class="flex-1 py-2 rounded-lg border border-gray-600 bg-gray-800 text-white text-xs font-semibold shadow-sm focus:ring-2 focus:ring-indigo-500" onclick="setTheme('dark')">Tmavé</button>
+                  <button class="flex-1 py-2 rounded-lg border border-red-200 bg-red-50 text-red-600 text-xs font-semibold shadow-sm focus:ring-2 focus:ring-red-500" onclick="setTheme('none')">Žiadne 🚫</button>
+              </div>
+              
+              <div class="flex items-center gap-3">
+                  <span class="text-xs text-gray-600 w-20">Priehľadnosť:</span>
+                  <input type="range" id="opacityInput" min="0" max="100" value="70" class="flex-1 accent-indigo-600 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+              </div>
+          </div>
+
+          <!-- Písmo -->
+          <div class="bg-gray-50 p-3 rounded-xl border border-gray-200 flex gap-4 items-center">
+               <div class="flex-1">
+                   <h3 class="text-xs font-bold text-gray-500 uppercase mb-2">Štýl Písma</h3>
+                   <select id="fontFamilySelect" class="w-full p-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                       <option value="'Inter', sans-serif">Moderné</option>
+                       <option value="'Lora', serif">Elegantné</option>
+                       <option value="'Caveat', cursive">Ručné</option>
+                       <option value="'Oswald', sans-serif">Hrubé</option>
+                   </select>
+               </div>
+               <div class="flex flex-col items-center">
+                   <h3 class="text-xs font-bold text-gray-500 uppercase mb-2">Farba</h3>
+                   <input type="color" id="fontColorInput" value="#1f2937">
+               </div>
+          </div>
+
+          <!-- Editácia textu -->
+          <details class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+              <summary class="text-sm font-bold text-gray-700 cursor-pointer list-none flex justify-between items-center select-none">
+                  ✏️ Upraviť text receptu
+                  <span class="text-indigo-500 text-xs uppercase font-bold">Rozbaliť</span>
+              </summary>
+              <textarea id="recipeInput" rows="8" class="w-full mt-2 p-2 text-sm border rounded-lg resize-none focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+          </details>
+      </div>
+  </div>
+
+  <script>
+    // --- DÁTA ---
+    const defaultRecipe = `🍯 MEDOVNÍKY OD BEÁTKY 🍪
+
+Ingrediencie:
+• 1 kg hladkej špaldovej múky
+• 3 PL perníkového korenia
+• 30 g kakaa
+• 1 PL sódy bikarbóny
+• 4 ks celé domáce vajíčka
+• 200 g medu
+• 1 maslo
+• troška rumu
+
+Postup:
+1. Múku a cukor preosiať. Pridať sypké suroviny.
+2. Pridať vajíčka, med, maslo, rum.
+3. Zmiešať, nechať postáť v chlade 24–48 hod.
+4. Piecť 4 min na 175 °C. Horúce potrieť vajíčkom.
+
+Poleva: 150g cukru + 1 bielok (šľahať 15 min).`;
+
+    // --- DOM ELEMENTY ---
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const imageUpload = document.getElementById('imageUpload');
+    const shareBtn = document.getElementById('shareBtn');
+    const recipeInput = document.getElementById('recipeInput');
+    const opacityInput = document.getElementById('opacityInput');
+    const fontFamilySelect = document.getElementById('fontFamilySelect');
+    const fontColorInput = document.getElementById('fontColorInput');
+    const placeholder = document.getElementById('placeholder');
+    const controlsPanel = document.getElementById('controlsPanel');
+    const togglePanel = document.getElementById('togglePanel');
+    const saveModal = document.getElementById('saveModal');
+    const resultImage = document.getElementById('resultImage');
+
+    recipeInput.value = defaultRecipe;
+
+    // --- STAV ---
+    let img = null;
+    let card = {
+        x: 0, y: 0, width: 0, height: 0,
+        opacity: 0.7,
+        theme: 'light',
+        fontFamily: "'Inter', sans-serif",
+        fontColor: "#1f2937"
+    };
+
+    // --- VÝPOČTY A KRESLENIE ---
+    function getLines(ctx, text, maxWidth) {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = words[0];
+
+        for (let i = 1; i < words.length; i++) {
+            const word = words[i];
+            const width = ctx.measureText(currentLine + " " + word).width;
+            if (width < maxWidth) {
+                currentLine += " " + word;
+            } else {
+                lines.push(currentLine);
+                currentLine = word;
+            }
+        }
+        lines.push(currentLine);
+        return lines;
+    }
+
+    function draw() {
+        if (!img) return;
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        let bgColor;
+        let strokeColor;
+
+        if (card.theme === 'light') {
+            bgColor = `rgba(255, 255, 255, ${card.opacity})`;
+            strokeColor = 'rgba(0,0,0,0.1)';
+        } else if (card.theme === 'dark') {
+            bgColor = `rgba(0, 0, 0, ${card.opacity})`;
+            strokeColor = 'rgba(255,255,255,0.2)';
+        } else {
+            bgColor = 'rgba(0,0,0,0)'; 
+            strokeColor = 'rgba(255,255,255,0.5)';
+        }
+
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(card.x, card.y, card.width, card.height);
+        
+        // Obrys pre "Žiadne pozadie" - len pomocný (čiarkovaný)
+        if (card.theme === 'none') {
+             ctx.setLineDash([10, 10]);
+             ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+             ctx.lineWidth = 2;
+             ctx.strokeRect(card.x, card.y, card.width, card.height);
+             ctx.setLineDash([]); 
+        } else {
+             ctx.strokeStyle = strokeColor;
+             ctx.lineWidth = 2;
+             ctx.strokeRect(card.x, card.y, card.width, card.height);
+        }
+
+        // Auto-fit textu
+        const padding = card.width * 0.05;
+        const contentWidth = card.width - (padding * 2);
+        const contentHeight = card.height - (padding * 2);
+        
+        let fontSize = 300;
+        let lines = [];
+        let lineHeight = 0;
+        const paragraphs = recipeInput.value.split('\n');
+
+        while (fontSize > 10) {
+            ctx.font = `bold ${fontSize}px ${card.fontFamily}`;
+            let totalTextHeight = 0;
+            lineHeight = fontSize * 1.3;
+            lines = [];
+            let fit = true;
+
+            for (let p of paragraphs) {
+                if (p.trim() === '') {
+                    totalTextHeight += lineHeight * 0.5;
+                    lines.push({ text: '', isHeader: false });
+                    continue;
+                }
+                const isHeader = p.toUpperCase() === p && p.length > 3 || p.includes('Ingrediencie') || p.includes('Postup') || p.includes('POLEVA');
+                const wrapped = getLines(ctx, p, contentWidth);
+                for (let w of wrapped) {
+                    lines.push({ text: w, isHeader: isHeader });
+                    totalTextHeight += lineHeight;
+                }
+            }
+
+            if (totalTextHeight < contentHeight) break;
+            fontSize -= 2;
+        }
+
+        let cursorY = card.y + padding + lineHeight * 0.8;
+
+        lines.forEach(line => {
+            if (line.text === '') {
+                cursorY += lineHeight * 0.5;
+                return;
+            }
+
+            ctx.font = line.isHeader ? `bold ${fontSize}px ${card.fontFamily}` : `${fontSize}px ${card.fontFamily}`;
+            ctx.fillStyle = card.fontColor;
+
+            if (card.theme === 'none' || card.opacity < 0.3) {
+                ctx.shadowColor = "rgba(0,0,0,1)";
+                ctx.shadowBlur = 4;
+                ctx.strokeStyle = card.fontColor === '#ffffff' ? 'black' : 'white';
+                ctx.lineWidth = fontSize / 20;
+                ctx.strokeText(line.text, card.x + padding, cursorY);
+            } else {
+                ctx.shadowColor = "transparent";
+            }
+
+            ctx.fillText(line.text, card.x + padding, cursorY);
+            cursorY += lineHeight;
+        });
+        
+        ctx.shadowColor = "transparent";
+    }
+
+    // --- ZDIEĽANIE / UKLADANIE (KĽÚČOVÁ ČASŤ) ---
+    shareBtn.addEventListener('click', async () => {
+        if (!img) return;
+
+        // 1. Prekresliť bez pomocných čiar
+        const originalTheme = card.theme;
+        
+        // Ak je theme 'none', chceme odstrániť čiarkovaný obrys pre finálny obrázok
+        if (card.theme === 'none') {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            // Znova text bez obdĺžnika
+            const padding = card.width * 0.05;
+            const contentWidth = card.width - (padding * 2);
+            const contentHeight = card.height - (padding * 2);
+            let fontSize = 300;
+            let lines = [];
+            let lineHeight = 0;
+            const paragraphs = recipeInput.value.split('\n');
+            while (fontSize > 10) {
+                ctx.font = `bold ${fontSize}px ${card.fontFamily}`;
+                let totalTextHeight = 0;
+                lineHeight = fontSize * 1.3;
+                lines = [];
+                for (let p of paragraphs) {
+                    if (p.trim() === '') { totalTextHeight += lineHeight * 0.5; lines.push({ text: '', isHeader: false }); continue; }
+                    const isHeader = p.toUpperCase() === p && p.length > 3 || p.includes('Ingrediencie') || p.includes('Postup') || p.includes('POLEVA');
+                    const wrapped = getLines(ctx, p, contentWidth);
+                    for (let w of wrapped) { lines.push({ text: w, isHeader: isHeader }); totalTextHeight += lineHeight; }
+                }
+                if (totalTextHeight < contentHeight) break;
+                fontSize -= 2;
+            }
+            let cursorY = card.y + padding + lineHeight * 0.8;
+            lines.forEach(line => {
+                if (line.text === '') { cursorY += lineHeight * 0.5; return; }
+                ctx.font = line.isHeader ? `bold ${fontSize}px ${card.fontFamily}` : `${fontSize}px ${card.fontFamily}`;
+                ctx.fillStyle = card.fontColor;
+                ctx.shadowColor = "rgba(0,0,0,1)"; ctx.shadowBlur = 4;
+                ctx.strokeStyle = card.fontColor === '#ffffff' ? 'black' : 'white'; ctx.lineWidth = fontSize / 20;
+                ctx.strokeText(line.text, card.x + padding, cursorY);
+                ctx.fillText(line.text, card.x + padding, cursorY);
+                cursorY += lineHeight;
+            });
+        }
+
+
+        canvas.toBlob(async (blob) => {
+            const file = new File([blob], "medovniky.png", { type: "image/png" });
+            
+            // SKÚSIŤ SYSTÉMOVÉ ZDIEĽANIE
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Moje Medovníky',
+                        text: 'Pozri si môj recept!'
+                    });
+                } catch (error) {
+                    console.log('Zdieľanie zrušené alebo zlyhalo', error);
+                    showFallbackModal(); 
+                }
+            } else {
+                showFallbackModal();
+            }
+            draw();
+        });
+    });
+
+    function showFallbackModal() {
+        const dataUrl = canvas.toDataURL('image/png');
+        resultImage.src = dataUrl;
+        saveModal.style.display = 'flex';
+    }
+
+    window.closeModal = () => {
+        saveModal.style.display = 'none';
+    }
+
+    // --- EVENT LISTENERS ---
+    imageUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            img = new Image();
+            img.onload = () => {
+                placeholder.style.display = 'none';
+                shareBtn.disabled = false;
+                
+                card.width = img.width * 0.8;
+                card.height = img.height * 0.8;
+                card.x = (img.width - card.width) / 2;
+                card.y = (img.height - card.height) / 2;
+                
+                draw();
+            };
+            img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Inputs update
+    opacityInput.addEventListener('input', (e) => { card.opacity = e.target.value / 100; draw(); });
+    fontFamilySelect.addEventListener('change', (e) => { card.fontFamily = e.target.value; draw(); });
+    fontColorInput.addEventListener('input', (e) => { card.fontColor = e.target.value; draw(); });
+    recipeInput.addEventListener('input', draw);
+    togglePanel.addEventListener('click', () => { controlsPanel.classList.toggle('collapsed'); });
+
+    window.setTheme = (theme) => {
+        card.theme = theme;
+        if (theme === 'light') { card.fontColor = '#1f2937'; fontColorInput.value = '#1f2937'; }
+        else { card.fontColor = '#ffffff'; fontColorInput.value = '#ffffff'; }
+        draw();
+    };
+
+    // --- GESTA ---
+    let isDragging = false, isPinching = false;
+    let startDragOffset = {x:0,y:0}, startPinchDist=0, startCardDims={w:0,h:0,x:0,y:0};
+
+    function getCanvasPoint(evt) {
+        const rect = canvas.getBoundingClientRect();
+        const cx = evt.touches ? evt.touches[0].clientX : evt.clientX;
+        const cy = evt.touches ? evt.touches[0].clientY : evt.clientY;
+        const sx = canvas.width / rect.width;
+        const sy = canvas.height / rect.height;
+        return { x: (cx - rect.left) * sx, y: (cy - rect.top) * sy };
+    }
+    function getDist(evt) {
+        if (evt.touches.length < 2) return 0;
+        const dx = evt.touches[0].clientX - evt.touches[1].clientX;
+        const dy = evt.touches[0].clientY - evt.touches[1].clientY;
+        return Math.sqrt(dx*dx + dy*dy);
+    }
+
+    canvas.addEventListener('touchstart', (e) => {
+        if (!img) return;
+        e.preventDefault();
+        if (e.touches.length === 2) {
+            isPinching = true; isDragging = false;
+            startPinchDist = getDist(e);
+            startCardDims = { w: card.width, h: card.height, x: card.x, y: card.y };
+            return;
+        }
+        const pt = getCanvasPoint(e);
+        isDragging = true;
+        startDragOffset = { x: pt.x - card.x, y: pt.y - card.y };
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (!img) return;
+        e.preventDefault();
+        if (isPinching && e.touches.length === 2) {
+            const dist = getDist(e);
+            const scale = dist / startPinchDist;
+            const newW = startCardDims.w * scale;
+            const newH = startCardDims.h * scale;
+            if (newW > 100 && newH > 100 && newW < img.width * 1.5) {
+                card.width = newW; card.height = newH;
+                card.x = startCardDims.x - (newW - startCardDims.w) / 2;
+                card.y = startCardDims.y - (newH - startCardDims.h) / 2;
+                draw();
+            }
+        } else if (isDragging) {
+            const pt = getCanvasPoint(e);
+            card.x = pt.x - startDragOffset.x;
+            card.y = pt.y - startDragOffset.y;
+            draw();
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => { isDragging = false; isPinching = false; });
+  </script>
+ </body>
+</html>
+
+
