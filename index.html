@@ -3,21 +3,22 @@
  <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Medovníky</title>
+  <title>Medovníky Editor</title>
   
-  <!-- !!! TOTO JE KĽÚČOVÉ PRE TVOJU IKONU !!! -->
-  <!-- Súbor Img_1399.png MUSÍ byť v rovnakej zložke ako tento index.html -->
-  <link rel="apple-touch-icon" sizes="180x180" href="Img_1399.png">
-  <link rel="icon" type="image/png" href="Img_1399.png">
-  <link rel="shortcut icon" href="Img_1399.png">
-  <!-- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! -->
+  <!-- ✅ OPRAVENÉ CESTY PRE GITHUB PAGES (./) -->
+  <!-- Uisti sa, že súbor sa volá presne Img_1399.png (veľké I) -->
+  <link rel="apple-touch-icon" sizes="180x180" href="./Img_1399.png">
+  <link rel="icon" type="image/png" href="./Img_1399.png">
+  <link rel="shortcut icon" href="./Img_1399.png">
 
+  <!-- Meta tagy pre iOS Web App -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Medovníky">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Inter:wght@400;700&family=Lora:ital,wght@0,600;1,600&family=Oswald:wght@500&display=swap" rel="stylesheet">
+  
   <style>
     body {
       touch-action: none;
@@ -73,7 +74,7 @@
         cursor: pointer;
     }
 
-    /* Modal pre manuálne uloženie */
+    /* Modal pre manuálne uloženie - FLEX layout pre centrovanie */
     .save-modal {
         display: none;
         position: fixed;
@@ -81,22 +82,25 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0,0,0,0.9);
+        background: rgba(0,0,0,0.95);
         z-index: 100;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         padding: 20px;
+        text-align: center;
     }
     
     .save-modal img {
         max-width: 100%;
-        max-height: 70vh;
+        max-height: 65vh;
         border: 2px solid white;
         border-radius: 8px;
         box-shadow: 0 0 20px rgba(255,255,255,0.2);
+        margin-bottom: 20px;
     }
 
+    /* Custom Color Input */
     input[type="color"] {
         -webkit-appearance: none;
         border: none;
@@ -123,12 +127,12 @@
       </div>
   </div>
 
-  <!-- Modal pre uloženie (Fallback) -->
+  <!-- Modal pre uloženie (VŽDY SA ZOBRAZÍ) -->
   <div id="saveModal" class="save-modal">
-      <h3 class="text-white text-xl font-bold mb-4 text-center">👇 Podržte prst na obrázku 👇</h3>
-      <p class="text-gray-300 text-sm mb-4 text-center">...a vyberte "Uložiť do fotiek" (Save to Photos)</p>
+      <h3 class="text-white text-xl font-bold mb-2">👇 Podrž prst na obrázku 👇</h3>
+      <p class="text-gray-300 text-sm mb-4">...a vyber "Uložiť do fotiek" (Save to Photos)</p>
       <img id="resultImage" alt="Výsledný obrázok">
-      <button onclick="closeModal()" class="mt-6 px-6 py-3 bg-white text-black font-bold rounded-full">Zavrieť</button>
+      <button onclick="closeModal()" class="px-8 py-3 bg-white text-black font-bold rounded-full shadow-lg active:scale-95 transition">Zavrieť</button>
   </div>
 
   <!-- Ovládací panel -->
@@ -142,8 +146,9 @@
                   <span>📷</span> Nahrať
                   <input type="file" id="imageUpload" accept="image/*" class="hidden">
               </label>
+              <!-- Zmenené na ULOŽIŤ -->
               <button id="shareBtn" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-md active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm" disabled>
-                  <span>📤</span> Uložiť / Zdieľať
+                  <span>💾</span> Uložiť
               </button>
           </div>
 
@@ -239,7 +244,7 @@ Poleva: 150g cukru + 1 bielok (šľahať 15 min).`;
         fontColor: "#1f2937"
     };
 
-    // --- VÝPOČTY A KRESLENIE ---
+    // --- POMOCNÉ FUNKCIE ---
     function getLines(ctx, text, maxWidth) {
         const words = text.split(' ');
         const lines = [];
@@ -259,15 +264,18 @@ Poleva: 150g cukru + 1 bielok (šľahať 15 min).`;
         return lines;
     }
 
-    function draw() {
+    // --- HLAVNÁ FUNKCIA KRESLENIA ---
+    // Pridal som parameter 'exportMode', ktorý vypne pomocné čiary
+    function draw(exportMode = false) {
         if (!img) return;
 
+        // 1. Kreslenie obrázka
         canvas.width = img.width;
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
 
-        let bgColor;
-        let strokeColor;
+        // 2. Nastavenie farieb pozadia
+        let bgColor, strokeColor;
 
         if (card.theme === 'light') {
             bgColor = `rgba(255, 255, 255, ${card.opacity})`;
@@ -276,27 +284,36 @@ Poleva: 150g cukru + 1 bielok (šľahať 15 min).`;
             bgColor = `rgba(0, 0, 0, ${card.opacity})`;
             strokeColor = 'rgba(255,255,255,0.2)';
         } else {
+            // Režim bez pozadia
             bgColor = 'rgba(0,0,0,0)'; 
             strokeColor = 'rgba(255,255,255,0.5)';
         }
 
+        // 3. Vykreslenie Boxu
         ctx.fillStyle = bgColor;
         ctx.fillRect(card.x, card.y, card.width, card.height);
         
-        // Obrys pre "Žiadne pozadie" - len pomocný (čiarkovaný)
-        if (card.theme === 'none') {
-             ctx.setLineDash([10, 10]);
-             ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-             ctx.lineWidth = 2;
-             ctx.strokeRect(card.x, card.y, card.width, card.height);
-             ctx.setLineDash([]); 
-        } else {
-             ctx.strokeStyle = strokeColor;
-             ctx.lineWidth = 2;
-             ctx.strokeRect(card.x, card.y, card.width, card.height);
+        // Obrys kreslíme LEN ak NIE JE export mód
+        // Alebo ak je export mód, ale karta má mať obrys (light/dark).
+        // Ak je theme 'none', pri exporte obrys NECHCEME.
+        
+        if (card.theme !== 'none' || !exportMode) {
+            if (card.theme === 'none') {
+                 // Čiarkovaný obrys len pre orientáciu
+                 ctx.setLineDash([10, 10]);
+                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                 ctx.lineWidth = 4;
+                 ctx.strokeRect(card.x, card.y, card.width, card.height);
+                 ctx.setLineDash([]); 
+            } else {
+                 // Normálny obrys pre light/dark karty
+                 ctx.strokeStyle = strokeColor;
+                 ctx.lineWidth = 2;
+                 ctx.strokeRect(card.x, card.y, card.width, card.height);
+            }
         }
 
-        // Auto-fit textu
+        // 4. Výpočet textu
         const padding = card.width * 0.05;
         const contentWidth = card.width - (padding * 2);
         const contentHeight = card.height - (padding * 2);
@@ -306,12 +323,12 @@ Poleva: 150g cukru + 1 bielok (šľahať 15 min).`;
         let lineHeight = 0;
         const paragraphs = recipeInput.value.split('\n');
 
+        // Hľadanie správnej veľkosti písma
         while (fontSize > 10) {
             ctx.font = `bold ${fontSize}px ${card.fontFamily}`;
             let totalTextHeight = 0;
             lineHeight = fontSize * 1.3;
             lines = [];
-            let fit = true;
 
             for (let p of paragraphs) {
                 if (p.trim() === '') {
@@ -331,6 +348,7 @@ Poleva: 150g cukru + 1 bielok (šľahať 15 min).`;
             fontSize -= 2;
         }
 
+        // 5. Vykreslenie textu
         let cursorY = card.y + padding + lineHeight * 0.8;
 
         lines.forEach(line => {
@@ -342,6 +360,7 @@ Poleva: 150g cukru + 1 bielok (šľahať 15 min).`;
             ctx.font = line.isHeader ? `bold ${fontSize}px ${card.fontFamily}` : `${fontSize}px ${card.fontFamily}`;
             ctx.fillStyle = card.fontColor;
 
+            // Ak nie je pozadie, pridáme tieň a obrys textu pre čitateľnosť
             if (card.theme === 'none' || card.opacity < 0.3) {
                 ctx.shadowColor = "rgba(0,0,0,1)";
                 ctx.shadowBlur = 4;
@@ -359,82 +378,29 @@ Poleva: 150g cukru + 1 bielok (šľahať 15 min).`;
         ctx.shadowColor = "transparent";
     }
 
-    // --- ZDIEĽANIE / UKLADANIE (KĽÚČOVÁ ČASŤ) ---
-    shareBtn.addEventListener('click', async () => {
+    // --- ✅ OPRAVENÉ UKLADANIE PRE GITHUB PAGES + IOS ---
+    shareBtn.addEventListener('click', () => {
         if (!img) return;
 
-        // 1. Prekresliť bez pomocných čiar
-        const originalTheme = card.theme;
-        
-        // Ak je theme 'none', chceme odstrániť čiarkovaný obrys pre finálny obrázok
-        if (card.theme === 'none') {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
+        // 1. Prekresliť v "čistom" režime (bez pomocných čiar pri 'none' téme)
+        draw(true);
+
+        try {
+            // 2. Vytvoriť DataURL (synchrónne, spoľahlivé na iOS)
+            const dataUrl = canvas.toDataURL("image/png");
             
-            // Znova text bez obdĺžnika
-            const padding = card.width * 0.05;
-            const contentWidth = card.width - (padding * 2);
-            const contentHeight = card.height - (padding * 2);
-            let fontSize = 300;
-            let lines = [];
-            let lineHeight = 0;
-            const paragraphs = recipeInput.value.split('\n');
-            while (fontSize > 10) {
-                ctx.font = `bold ${fontSize}px ${card.fontFamily}`;
-                let totalTextHeight = 0;
-                lineHeight = fontSize * 1.3;
-                lines = [];
-                for (let p of paragraphs) {
-                    if (p.trim() === '') { totalTextHeight += lineHeight * 0.5; lines.push({ text: '', isHeader: false }); continue; }
-                    const isHeader = p.toUpperCase() === p && p.length > 3 || p.includes('Ingrediencie') || p.includes('Postup') || p.includes('POLEVA');
-                    const wrapped = getLines(ctx, p, contentWidth);
-                    for (let w of wrapped) { lines.push({ text: w, isHeader: isHeader }); totalTextHeight += lineHeight; }
-                }
-                if (totalTextHeight < contentHeight) break;
-                fontSize -= 2;
-            }
-            let cursorY = card.y + padding + lineHeight * 0.8;
-            lines.forEach(line => {
-                if (line.text === '') { cursorY += lineHeight * 0.5; return; }
-                ctx.font = line.isHeader ? `bold ${fontSize}px ${card.fontFamily}` : `${fontSize}px ${card.fontFamily}`;
-                ctx.fillStyle = card.fontColor;
-                ctx.shadowColor = "rgba(0,0,0,1)"; ctx.shadowBlur = 4;
-                ctx.strokeStyle = card.fontColor === '#ffffff' ? 'black' : 'white'; ctx.lineWidth = fontSize / 20;
-                ctx.strokeText(line.text, card.x + padding, cursorY);
-                ctx.fillText(line.text, card.x + padding, cursorY);
-                cursorY += lineHeight;
-            });
+            // 3. Okamžite zobraziť modal
+            resultImage.src = dataUrl;
+            saveModal.style.display = 'flex';
+
+        } catch (e) {
+            alert("Chyba pri generovaní obrázka. Skúste znova.");
+            console.error(e);
         }
 
-
-        canvas.toBlob(async (blob) => {
-            const file = new File([blob], "medovniky.png", { type: "image/png" });
-            
-            // SKÚSIŤ SYSTÉMOVÉ ZDIEĽANIE
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                try {
-                    await navigator.share({
-                        files: [file],
-                        title: 'Moje Medovníky',
-                        text: 'Pozri si môj recept!'
-                    });
-                } catch (error) {
-                    console.log('Zdieľanie zrušené alebo zlyhalo', error);
-                    showFallbackModal(); 
-                }
-            } else {
-                showFallbackModal();
-            }
-            draw();
-        });
+        // 4. Vrátiť kreslenie do normálu (s pomocnými čiarami)
+        draw(false);
     });
-
-    function showFallbackModal() {
-        const dataUrl = canvas.toDataURL('image/png');
-        resultImage.src = dataUrl;
-        saveModal.style.display = 'flex';
-    }
 
     window.closeModal = () => {
         saveModal.style.display = 'none';
@@ -451,6 +417,7 @@ Poleva: 150g cukru + 1 bielok (šľahať 15 min).`;
                 placeholder.style.display = 'none';
                 shareBtn.disabled = false;
                 
+                // Reset pozície karty
                 card.width = img.width * 0.8;
                 card.height = img.height * 0.8;
                 card.x = (img.width - card.width) / 2;
@@ -463,7 +430,6 @@ Poleva: 150g cukru + 1 bielok (šľahať 15 min).`;
         reader.readAsDataURL(file);
     });
 
-    // Inputs update
     opacityInput.addEventListener('input', (e) => { card.opacity = e.target.value / 100; draw(); });
     fontFamilySelect.addEventListener('change', (e) => { card.fontFamily = e.target.value; draw(); });
     fontColorInput.addEventListener('input', (e) => { card.fontColor = e.target.value; draw(); });
@@ -477,7 +443,7 @@ Poleva: 150g cukru + 1 bielok (šľahať 15 min).`;
         draw();
     };
 
-    // --- GESTA ---
+    // --- GESTÁ ---
     let isDragging = false, isPinching = false;
     let startDragOffset = {x:0,y:0}, startPinchDist=0, startCardDims={w:0,h:0,x:0,y:0};
 
@@ -536,5 +502,3 @@ Poleva: 150g cukru + 1 bielok (šľahať 15 min).`;
   </script>
  </body>
 </html>
-
-
